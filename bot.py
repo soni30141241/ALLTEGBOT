@@ -241,21 +241,17 @@ async def tagall(client, message):
         if not mentions:
             return await message.reply_text("No members found.")
 
-        header = f"📢 **{custom}**\n\n"
-        chunk = header
-
-        for mention in mentions:
+        # Send exactly 5 members per message.
+        # Example: members 1-5 in message 1, 6-10 in message 2, etc.
+        for start in range(0, len(mentions), 5):
             if chat_id not in active_tags:
                 return await message.reply_text("🛑 Tagall cancelled.")
 
-            piece = mention + " "
-            if len(chunk) + len(piece) > 3800:
-                await message.reply_text(chunk, disable_web_page_preview=True)
-                chunk = ""
-            chunk += piece
-
-        if chunk.strip() and chat_id in active_tags:
-            await message.reply_text(chunk, disable_web_page_preview=True)
+            batch = mentions[start:start + 5]
+            batch_no = (start // 5) + 1
+            text = f"📢 **{custom}**\n\n" if start == 0 else "📢 **Next 5 members**\n\n"
+            text += "\n".join(batch)
+            await message.reply_text(text, disable_web_page_preview=True)
 
     finally:
         active_tags.discard(chat_id)
