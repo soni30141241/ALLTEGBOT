@@ -1,4 +1,6 @@
 import os
+import asyncio
+import re
 from pyrogram import Client, filters
 from pyrogram.types import ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import RPCError
@@ -205,56 +207,60 @@ async def settings(client, message):
     )
 
 
-@app.on_message(filters.command(["tagall", "ping", "all"]) & filters.group)
-async def tagall(client, message):
-    if not await is_admin(client, message.chat.id, message.from_user.id if message.from_user else None, message):
-        return await message.reply_text("❌ Admins only. Group Admin/Owner required.")
-
+async def run_tagall(client, message, custom):
     chat_id = message.chat.id
     if chat_id in active_tags:
         return await message.reply_text("⚠️ A tagall is already running. Use /cancel to stop it.")
 
-    custom = message.text.split(None, 1)[1] if len(message.command) > 1 else "Attention everyone! 📢"
     active_tags.add(chat_id)
-
     try:
         mentions = []
         seen = set()
-
         try:
             async for member in client.get_chat_members(chat_id):
                 if chat_id not in active_tags:
-                    return await message.reply_text("🛑 Tagall cancelled.")
-
+                    return
                 user = member.user
                 if user.is_bot or user.is_deleted or user.id in seen:
                     continue
-
                 seen.add(user.id)
-                name = (user.first_name or "User").replace("[", "").replace("]", "")
-                mentions.append(f"[{name}](tg://user?id={user.id})")
+                mentions.append(user.mention)
         except RPCError:
-            return await message.reply_text(
-                "❌ I could not read the member list. Make sure I am an admin."
-            )
+            return await message.reply_text("❌ I could not read the member list. Make sure I am an admin.")
 
         if not mentions:
             return await message.reply_text("No members found.")
 
-        # Send exactly 5 members per message.
-        # Example: members 1-5 in message 1, 6-10 in message 2, etc.
         for start in range(0, len(mentions), 5):
             if chat_id not in active_tags:
                 return await message.reply_text("🛑 Tagall cancelled.")
-
             batch = mentions[start:start + 5]
-            batch_no = (start // 5) + 1
-            text = f"📢 **{custom}**\n\n" if start == 0 else "📢 **Next 5 members**\n\n"
-            text += "\n".join(batch)
-            await message.reply_text(text, disable_web_page_preview=True)
-
+            # Repeat the user's tag message on EVERY 5-member batch.
+            # Example: /tagall Happy Janmashtami -> every batch starts with
+            # "📢 Happy Janmashtami", never "Next 5 members".
+            heading = f"#all {custom}\n"
+            await message.reply_text(heading + "\n".join(batch), disable_web_page_preview=True)
+            # Slow mode: wait 3 seconds before sending the next 5-member list.
+            if start + 5 < len(mentions):
+                await asyncio.sleep(3)
     finally:
         active_tags.discard(chat_id)
+
+
+@app.on_message(filters.command(["tagall", "ping", "all"]) & filters.group)
+async def tagall(client, message):
+    if not await is_admin(client, message.chat.id, message.from_user.id if message.from_user else None, message):
+        return await message.reply_text("❌ Admins only. Group Admin/Owner required.")
+    custom = message.text.split(None, 1)[1] if len(message.command) > 1 else "Attention everyone! 📢"
+    await run_tagall(client, message, custom)
+
+
+@app.on_message(filters.group & filters.text & ~filters.service)
+async def good_morning_tagall(client, message):
+    # Any member saying "Good morning" triggers the same 5-at-a-time slow tagall.
+    text = (message.text or "").strip().casefold()
+    if re.fullmatch(r"good\s+morning(?:[!,.🌅☀️🙂😊]*)?", text):
+        await run_tagall(client, message, "good morning 🌄")
 
 
 @app.on_message(filters.command(["cancel", "stop"]) & filters.group)
