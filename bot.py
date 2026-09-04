@@ -1,6 +1,6 @@
 import os
 from pyrogram import Client, filters
-from pyrogram.types import ChatPermissions
+from pyrogram.types import ChatPermissions, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from pyrogram.errors import RPCError
 from pyrogram import idle
 from pyrogram.types import BotCommand
@@ -12,6 +12,9 @@ API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 DATABASE_PATH = os.getenv("DATABASE_PATH", "bot.db")
+OWNER_USERNAME = os.getenv("OWNER_USERNAME", "").strip().lstrip("@")
+SUPPORT_USERNAME = os.getenv("SUPPORT_USERNAME", "").strip().lstrip("@")
+HELP_URL = os.getenv("HELP_URL", "").strip()
 
 if not API_ID or not API_HASH or not BOT_TOKEN:
     raise RuntimeError("Missing API_ID, API_HASH or BOT_TOKEN environment variables.")
@@ -59,10 +62,23 @@ async def welcome(client, message):
         )
 
 
+def start_keyboard():
+    owner_btn = (InlineKeyboardButton("👑 Owner", url=f"https://t.me/{OWNER_USERNAME}")
+                 if OWNER_USERNAME else
+                 InlineKeyboardButton("👑 Owner", callback_data="owner_info"))
+    support_btn = (InlineKeyboardButton("🛟 Support", url=f"https://t.me/{SUPPORT_USERNAME}")
+                   if SUPPORT_USERNAME else
+                   InlineKeyboardButton("🛟 Support", callback_data="support_info"))
+    help_btn = (InlineKeyboardButton("📚 Help", url=HELP_URL)
+                if HELP_URL.startswith("http") else
+                InlineKeyboardButton("📚 Help", callback_data="help_info"))
+    return InlineKeyboardMarkup([[owner_btn, help_btn], [support_btn]])
+
+
 @app.on_message(filters.command("start", prefixes="/") & (filters.private | filters.group))
 async def start_cmd(client, message):
     await message.reply_text(
-        "🤖 **Group Manager Bot is Online!**\n\n"
+        "🤖 **WAFA MENTION BOT is Online!**\n\n"
         "👋 Welcome! I can manage your Telegram group.\n\n"
         "🛡️ **Features**\n"
         "• 👋 Welcome messages\n"
@@ -72,8 +88,31 @@ async def start_cmd(client, message):
         "• 🍔 Optional anti-food filter\n"
         "• 📢 Admin/Owner tagall\n"
         "• 🛑 Cancel running tagall\n\n"
-        "📚 Use /help for commands."
+        "📚 Use /help for commands.",
+        reply_markup=start_keyboard()
     )
+
+
+@app.on_callback_query(filters.regex("^(owner_info|support_info|help_info)$"))
+async def info_buttons(client, query: CallbackQuery):
+    data = query.data
+    if data == "owner_info":
+        text = (f"👑 **Owner:** @{OWNER_USERNAME}" if OWNER_USERNAME else
+                "👑 **Owner button is ready.**\nSet `OWNER_USERNAME` in Railway Variables to add the owner's Telegram link.")
+    elif data == "support_info":
+        text = (f"🛟 **Support:** @{SUPPORT_USERNAME}" if SUPPORT_USERNAME else
+                "🛟 **Support button is ready.**\nSet `SUPPORT_USERNAME` in Railway Variables to add the support Telegram link.")
+    else:
+        text = ("📚 **Help**\n\n"
+                "/tagall, /ping, /all — tag members (Admin/Owner)\n"
+                "/cancel, /stop — cancel tagall\n"
+                "/warn — warn a replied user\n"
+                "/warnings — check warnings\n"
+                "/resetwarn — reset warnings\n"
+                "/setwarnlimit N — set warning limit\n"
+                "/settings — show settings")
+    await query.answer()
+    await query.message.reply_text(text, disable_web_page_preview=True)
 
 
 @app.on_message(filters.command("help", prefixes="/") & (filters.private | filters.group))

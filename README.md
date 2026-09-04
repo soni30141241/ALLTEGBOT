@@ -74,3 +74,7 @@ Do not commit real API credentials or bot tokens to GitHub.
 This project implements similar member-mention behavior to the TeLe TiPs PingAllBot project. See: https://github.com/teletips/PingAllBot-TeLeTiPs
 
 The upstream project is licensed under AGPL-3.0. This bot is an independent implementation and does not copy its source code.
+
+
+### Start buttons
+The /start message includes Owner, Help, and Support buttons. Set `OWNER_USERNAME`, `SUPPORT_USERNAME`, and optionally `HELP_URL` in Railway Variables to make them open directly.
