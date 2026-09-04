@@ -2,6 +2,7 @@ import os
 from pyrogram import Client, filters
 from pyrogram.types import ChatPermissions
 from pyrogram.errors import RPCError
+from pyrogram.types import BotCommand
 from database import Database
 from moderation import Moderation
 
@@ -44,7 +45,7 @@ async def welcome(client, message):
         )
 
 
-@app.on_message(filters.command("start"))
+@app.on_message(filters.command("start", prefixes="/") & (filters.private | filters.group))
 async def start_cmd(client, message):
     await message.reply_text(
         "🤖 **Group Manager Bot is Online!**\n\n"
@@ -61,7 +62,7 @@ async def start_cmd(client, message):
     )
 
 
-@app.on_message(filters.command("help"))
+@app.on_message(filters.command("help", prefixes="/") & (filters.private | filters.group))
 async def help_cmd(client, message):
     await message.reply_text(
         "🤖 **Group Manager Bot**\n\n"
@@ -269,6 +270,22 @@ async def moderate(client, message):
         )
 
 
+async def setup_commands(client):
+    await client.set_bot_commands([
+        BotCommand("start", "Start the bot"),
+        BotCommand("help", "Show help"),
+        BotCommand("tagall", "Tag all members (Admin/Owner)"),
+        BotCommand("cancel", "Cancel running tagall"),
+        BotCommand("warn", "Warn a replied user"),
+        BotCommand("warnings", "Check warnings"),
+        BotCommand("resetwarn", "Reset warnings"),
+        BotCommand("setwarnlimit", "Set warning limit"),
+        BotCommand("settings", "Show group settings"),
+    ])
+    me = await client.get_me()
+    print(f"🤖 Bot online: @{me.username}")
+    print("✅ /start and /help handlers loaded.")
+
+
 print("🤖 Group Manager Bot starting...")
-print("✅ /start and /help handlers loaded.")
-app.run()
+app.run(setup_commands)
