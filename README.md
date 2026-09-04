@@ -68,3 +68,9 @@ The bot can only tag members that Telegram exposes through `get_chat_members`. M
 The abuse/food word lists in `moderation.py` are examples. Edit them to match your group's rules.
 
 Do not commit real API credentials or bot tokens to GitHub.
+
+
+## Reference / Credits
+This project implements similar member-mention behavior to the TeLe TiPs PingAllBot project. See: https://github.com/teletips/PingAllBot-TeLeTiPs
+
+The upstream project is licensed under AGPL-3.0. This bot is an independent implementation and does not copy its source code.

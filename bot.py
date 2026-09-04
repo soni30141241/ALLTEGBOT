@@ -4,6 +4,7 @@ from pyrogram.types import ChatPermissions
 from pyrogram.errors import RPCError
 from pyrogram import idle
 from pyrogram.types import BotCommand
+from pyrogram.enums import ChatMemberStatus
 from database import Database
 from moderation import Moderation
 
@@ -27,10 +28,22 @@ mod = Moderation(db)
 active_tags = set()
 
 
-async def is_admin(client, chat_id, user_id):
+async def is_admin(client, chat_id, user_id=None, message=None):
+    """Robust admin/owner check, including anonymous admins."""
+    if message is not None and getattr(message, "sender_chat", None):
+        if message.sender_chat.id == chat_id:
+            return True
+
+    if not user_id:
+        return False
+
     try:
         member = await client.get_chat_member(chat_id, user_id)
-        return member.status in ("administrator", "owner")
+        if member.status in (ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.OWNER):
+            return True
+        # Pyrogram versions / Telegram responses may expose string statuses.
+        status = str(member.status).lower()
+        return status in ("administrator", "creator", "owner")
     except RPCError:
         return False
 
@@ -67,7 +80,8 @@ async def start_cmd(client, message):
 async def help_cmd(client, message):
     await message.reply_text(
         "🤖 **Group Manager Bot**\n\n"
-        "📢 /tagall [message] — tag group members\n"
+        "📢 /tagall, /ping, /all [message] — tag group members\n"
+        "🛑 /cancel, /stop — cancel running tagall\n"
         "⚠️ /warn — warn replied user\n"
         "📋 /warnings — check warnings\n"
         "♻️ /resetwarn — reset replied user's warnings\n"
@@ -152,9 +166,9 @@ async def settings(client, message):
     )
 
 
-@app.on_message(filters.command("tagall") & filters.group)
+@app.on_message(filters.command(["tagall", "ping", "all"]) & filters.group)
 async def tagall(client, message):
-    if not await is_admin(client, message.chat.id, message.from_user.id):
+    if not await is_admin(client, message.chat.id, message.from_user.id if message.from_user else None, message):
         return await message.reply_text("❌ Admins only. Group Admin/Owner required.")
 
     chat_id = message.chat.id
@@ -208,9 +222,9 @@ async def tagall(client, message):
         active_tags.discard(chat_id)
 
 
-@app.on_message(filters.command("cancel") & filters.group)
+@app.on_message(filters.command(["cancel", "stop"]) & filters.group)
 async def cancel_tagall(client, message):
-    if not await is_admin(client, message.chat.id, message.from_user.id):
+    if not await is_admin(client, message.chat.id, message.from_user.id if message.from_user else None, message):
         return await message.reply_text("❌ Admins only. Group Admin/Owner required.")
 
     chat_id = message.chat.id
