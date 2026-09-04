@@ -46,9 +46,12 @@ Railway's current build system supports Python and Dockerfiles; using the includ
 
 ## Commands
 
+- `/start` — bot online/status message
+
 ```text
 /help
-/tagall [message]
+/tagall [message] — Admin/Owner only
+/cancel — stop running tagall (Admin/Owner only)
 /warn
 /warnings
 /resetwarn

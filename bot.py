@@ -22,6 +22,7 @@ app = Client(
 
 db = Database(DATABASE_PATH)
 mod = Moderation(db)
+active_tags = set()
 
 
 async def is_admin(client, chat_id, user_id):
@@ -43,7 +44,24 @@ async def welcome(client, message):
         )
 
 
-@app.on_message(filters.command("help") & filters.group)
+@app.on_message(filters.command("start"))
+async def start_cmd(client, message):
+    await message.reply_text(
+        "🤖 **Group Manager Bot is Online!**\n\n"
+        "👋 Welcome! I can manage your Telegram group.\n\n"
+        "🛡️ **Features**\n"
+        "• 👋 Welcome messages\n"
+        "• ⚠️ Warning system\n"
+        "• 🛡️ Abuse protection\n"
+        "• 🛑 Anti-spam / anti-flood\n"
+        "• 🍔 Optional anti-food filter\n"
+        "• 📢 Admin/Owner tagall\n"
+        "• 🛑 Cancel running tagall\n\n"
+        "📚 Use /help for commands."
+    )
+
+
+@app.on_message(filters.command("help"))
 async def help_cmd(client, message):
     await message.reply_text(
         "🤖 **Group Manager Bot**\n\n"
@@ -135,40 +153,70 @@ async def settings(client, message):
 @app.on_message(filters.command("tagall") & filters.group)
 async def tagall(client, message):
     if not await is_admin(client, message.chat.id, message.from_user.id):
-        return await message.reply_text("❌ Admins only.")
+        return await message.reply_text("❌ Admins only. Group Admin/Owner required.")
+
+    chat_id = message.chat.id
+    if chat_id in active_tags:
+        return await message.reply_text("⚠️ A tagall is already running. Use /cancel to stop it.")
 
     custom = message.text.split(None, 1)[1] if len(message.command) > 1 else "Attention everyone! 📢"
-    mentions = []
-    seen = set()
+    active_tags.add(chat_id)
 
     try:
-        async for member in client.get_chat_members(message.chat.id):
-            user = member.user
-            if user.is_bot or user.is_deleted or user.id in seen:
-                continue
-            seen.add(user.id)
-            name = (user.first_name or "User").replace("[", "").replace("]", "")
-            mentions.append(f"[{name}](tg://user?id={user.id})")
-    except RPCError:
-        return await message.reply_text(
-            "❌ I could not read the member list. Make sure I am an admin."
-        )
+        mentions = []
+        seen = set()
 
-    if not mentions:
-        return await message.reply_text("No members found.")
+        try:
+            async for member in client.get_chat_members(chat_id):
+                if chat_id not in active_tags:
+                    return await message.reply_text("🛑 Tagall cancelled.")
 
-    # Telegram message limit is ~4096 chars; split safely.
-    header = f"📢 **{custom}**\n\n"
-    chunk = header
-    for mention in mentions:
-        piece = mention + " "
-        if len(chunk) + len(piece) > 3800:
+                user = member.user
+                if user.is_bot or user.is_deleted or user.id in seen:
+                    continue
+
+                seen.add(user.id)
+                name = (user.first_name or "User").replace("[", "").replace("]", "")
+                mentions.append(f"[{name}](tg://user?id={user.id})")
+        except RPCError:
+            return await message.reply_text(
+                "❌ I could not read the member list. Make sure I am an admin."
+            )
+
+        if not mentions:
+            return await message.reply_text("No members found.")
+
+        header = f"📢 **{custom}**\n\n"
+        chunk = header
+
+        for mention in mentions:
+            if chat_id not in active_tags:
+                return await message.reply_text("🛑 Tagall cancelled.")
+
+            piece = mention + " "
+            if len(chunk) + len(piece) > 3800:
+                await message.reply_text(chunk, disable_web_page_preview=True)
+                chunk = ""
+            chunk += piece
+
+        if chunk.strip() and chat_id in active_tags:
             await message.reply_text(chunk, disable_web_page_preview=True)
-            chunk = ""
-        chunk += piece
 
-    if chunk.strip():
-        await message.reply_text(chunk, disable_web_page_preview=True)
+    finally:
+        active_tags.discard(chat_id)
+
+
+@app.on_message(filters.command("cancel") & filters.group)
+async def cancel_tagall(client, message):
+    if not await is_admin(client, message.chat.id, message.from_user.id):
+        return await message.reply_text("❌ Admins only. Group Admin/Owner required.")
+
+    chat_id = message.chat.id
+    if chat_id not in active_tags:
+        return await message.reply_text("ℹ️ No tagall is currently running.")
+
+    active_tags.discard(chat_id)
+    await message.reply_text("🛑 **Tagall cancelled.**")
 
 
 @app.on_message(filters.group & ~filters.service)
@@ -222,4 +270,5 @@ async def moderate(client, message):
 
 
 print("🤖 Group Manager Bot starting...")
+print("✅ /start and /help handlers loaded.")
 app.run()
