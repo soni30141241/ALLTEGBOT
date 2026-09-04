@@ -2,6 +2,7 @@ import os
 from pyrogram import Client, filters
 from pyrogram.types import ChatPermissions
 from pyrogram.errors import RPCError
+from pyrogram import idle
 from pyrogram.types import BotCommand
 from database import Database
 from moderation import Moderation
