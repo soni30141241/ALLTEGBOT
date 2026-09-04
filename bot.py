@@ -288,5 +288,13 @@ async def setup_commands(client):
     print("✅ /start and /help handlers loaded.")
 
 
-print("🤖 Group Manager Bot starting...")
-app.run(setup_commands)
+async def main():
+    print("🤖 Group Manager Bot starting...")
+    await app.start()
+    await setup_commands(app)
+    await idle()
+    await app.stop()
+
+
+if __name__ == "__main__":
+    app.run(main())
