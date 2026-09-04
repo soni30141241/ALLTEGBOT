@@ -238,7 +238,7 @@ My name is **PingAll**. I'm here to help you to get everyone's attention by ment
 
 I have some additional cool features and also I can work in channels.
 
-Don't forget to join my [channel](http://t.me/teletipsofficialchannel) to recieve information on all the latest updates.
+Don't forget to join my [channel](https://t.me/wafa_Mohabbat_ki) to recieve information on all the latest updates.
 
 Hit /help to find out my commands and the use of them.
 '''
