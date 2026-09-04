@@ -2,14 +2,18 @@ import re
 import time
 from collections import defaultdict, deque
 
+# Customize these lists for your own group/language.
 ABUSE_WORDS = {
-    "bc", "mc", "madarchod", "bhosdike", "chutiya", "gandu",
-    "harami", "fuck", "fucker", "motherfucker"
+    "bc", "mc", "madarchod", "bhosdike", "chutiya",
+    "gandu", "harami", "fuck", "fucker", "motherfucker"
 }
+
+# Optional filter. Disabled by default in the database.
 FOOD_WORDS = {
-    "pizza", "burger", "food", "biryani", "chicken", "momos",
-    "fries", "noodles"
+    "pizza", "burger", "food", "biryani", "chicken",
+    "momos", "fries", "noodles"
 }
+
 
 class Moderation:
     def __init__(self, db):
@@ -17,12 +21,13 @@ class Moderation:
         self.recent = defaultdict(lambda: deque(maxlen=6))
 
     def check(self, message):
-        text = (message.text or message.caption or "").lower()
+        text = (message.text or message.caption or "").lower().strip()
         if not text:
             return None
-        settings = self.db.get_settings(message.chat.id)
 
+        settings = self.db.get_settings(message.chat.id)
         words = set(re.findall(r"[a-z0-9']+", text))
+
         if settings["abuse_filter"] and words & ABUSE_WORDS:
             return "Abusive language"
 
@@ -34,6 +39,9 @@ class Moderation:
             now = time.time()
             q = self.recent[key]
             q.append((now, text))
+
+            # 5 messages in 12 seconds = flood/spam warning.
             if len(q) >= 5 and now - q[0][0] <= 12:
                 return "Spam/flood detected"
+
         return None

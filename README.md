@@ -1,55 +1,67 @@
-# Telegram Group Manager Bot
+# 🤖 Telegram Group Manager Bot
 
-A Pyrogram-based Telegram group management bot with:
+Ready-to-deploy Telegram group management bot using Pyrogram.
 
-- Welcome messages
-- Warning system
-- Auto moderation
-- Abuse filter
-- Anti-spam/flood detection
-- Optional anti-food keyword filter
-- `/tagall` member mentions
-- SQLite database
-- Railway/Heroku-friendly worker setup
+## Features
+
+- 👋 Welcome message
+- ⚠️ Warning system
+- 🔇 Automatic mute after warning limit
+- 🛡️ Abuse filter
+- 🛑 Anti-spam / anti-flood
+- 🍔 Optional food-word filter
+- 📢 `/tagall` reads the current Telegram member list
+- ⚙️ Group settings
+- 💾 SQLite database
+- 🚀 Railway deployment with Dockerfile
+- 🔐 Secrets via environment variables
 
 ## Environment variables
 
-Set:
+Required:
 
-- `API_ID`
-- `API_HASH`
-- `BOT_TOKEN`
-- `DATABASE_PATH` (optional, default `bot.db`)
-
-Never commit your real `.env` or bot token.
-
-## Local run
-
-```bash
-pip install -r requirements.txt
-python bot.py
+```text
+API_ID
+API_HASH
+BOT_TOKEN
 ```
 
-## Telegram setup
+Optional:
 
-1. Create a bot with BotFather and copy the token.
-2. Get API ID/API HASH from my.telegram.org.
-3. Add the bot to your group.
-4. Make the bot an administrator with permission to delete messages and restrict users.
-5. Members are saved when they send messages, so `/tagall` can mention known members.
+```text
+DATABASE_PATH=bot.db
+```
+
+## Railway deployment
+
+1. Upload this repository to GitHub.
+2. In Railway, create a new service from the GitHub repository.
+3. Railway will detect the `Dockerfile`.
+4. Add `API_ID`, `API_HASH`, and `BOT_TOKEN` under Variables.
+5. Deploy.
+6. Add the bot to your Telegram group.
+7. Give the bot administrator permissions, especially **Delete Messages** and **Restrict Members**.
+
+Railway's current build system supports Python and Dockerfiles; using the included Dockerfile avoids relying on a specific `runtime.txt`/Mise Python download. See Railway's build configuration documentation for customization options.
 
 ## Commands
 
-- `/help`
-- `/tagall [message]`
-- `/warn` (reply to a user)
-- `/warnings`
-- `/resetwarn` (admin, reply)
-- `/setwarnlimit N`
-- `/settings`
+```text
+/help
+/tagall [message]
+/warn
+/warnings
+/resetwarn
+/setwarnlimit 3
+/settings
+```
 
-## Notes
+`/warn` and `/resetwarn` should be used as a reply to the target user's message.
 
-The anti-food filter is disabled by default (`anti_food=0`). The keyword lists in `moderation.py` are intentionally simple and should be customized for your group.
+## Important
 
-This project uses SQLite for simplicity. For multiple workers or high traffic, use a proper shared database such as PostgreSQL and add migrations.
+The bot can only tag members that Telegram exposes through `get_chat_members`. Make the bot an administrator in the group.
+
+The abuse/food word lists in `moderation.py` are examples. Edit them to match your group's rules.
+
+Do not commit real API credentials or bot tokens to GitHub.
